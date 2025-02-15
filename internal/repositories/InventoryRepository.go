@@ -31,12 +31,15 @@ func (r *inventoryRepository) UpdateItem(item *domain.InventoryItem) error {
 }
 
 func (r *inventoryRepository) GetByUserAndType(userID uint, itemType string) (*domain.InventoryItem, error) {
-	var inv domain.InventoryItem
-	err := r.db.Where("user_id = ? AND item_type = ?", userID, itemType).First(&inv).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+	var item domain.InventoryItem
+	err := r.db.Where("user_id = ? AND item_type = ?", userID, itemType).First(&item).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return &inv, err
+	return &item, nil
 }
 
 func (r *inventoryRepository) GetAllByUser(userID uint) ([]domain.InventoryItem, error) {

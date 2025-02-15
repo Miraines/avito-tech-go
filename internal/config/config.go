@@ -7,11 +7,11 @@ import (
 
 type Config struct {
 	AppPort   string
-	DbHost    string
-	DbPort    int
-	DbUser    string
-	DbPass    string
-	DbName    string
+	DBHost    string
+	DBPort    int
+	DBUser    string
+	DBPass    string
+	DBName    string
 	JWTSecret string
 }
 
@@ -21,17 +21,18 @@ func LoadConfig() (*Config, error) {
 		dbPortStr = "5432"
 	}
 	dbPort, err := strconv.Atoi(dbPortStr)
+
 	if err != nil {
 		return nil, err
 	}
 
 	cfg := &Config{
 		AppPort:   getEnv("APP_PORT", "8080"),
-		DbHost:    getEnv("DB_HOST", "localhost"),
-		DbPort:    dbPort,
-		DbUser:    getEnv("DB_USER", "postgres"),
-		DbPass:    getEnv("DB_PASSWORD", "postgres"),
-		DbName:    getEnv("DB_NAME", "avito_shop"),
+		DBHost:    getEnv("DB_HOST", "localhost"),
+		DBPort:    dbPort,
+		DBUser:    getEnv("DB_USER", "postgres"),
+		DBPass:    getEnv("DB_PASSWORD", "postgres"),
+		DBName:    getEnv("DB_NAME", "avito_shop"),
 		JWTSecret: getEnv("JWT_SECRET", "avitomiraines"),
 	}
 
@@ -43,5 +44,6 @@ func getEnv(key, defaultValue string) string {
 	if val == "" {
 		return defaultValue
 	}
+
 	return val
 }

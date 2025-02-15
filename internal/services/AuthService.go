@@ -31,7 +31,7 @@ func HashPassword(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(bytes), err
+	return string(bytes), nil
 }
 
 func CheckPassword(hashedPassword, password string) error {
@@ -93,7 +93,7 @@ func (a *authService) Login(username, password string) (string, error) {
 		return "", fmt.Errorf("user '%s' not found", username)
 	}
 
-	if err := CheckPassword(password, user.PasswordHash); err != nil {
+	if err := CheckPassword(user.PasswordHash, password); err != nil {
 		return "", err
 	}
 

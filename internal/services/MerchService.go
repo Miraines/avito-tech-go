@@ -57,7 +57,7 @@ func (m *merchService) BuyItem(userID uint, itemType string) error {
 		}
 
 		user.Coins -= merchItem.Price
-		if err := tx.Save(user).Error; err != nil {
+		if err := m.userRepo.UpdateUser(user); err != nil {
 			return err
 		}
 
@@ -71,12 +71,12 @@ func (m *merchService) BuyItem(userID uint, itemType string) error {
 				UserID:   userID,
 				Quantity: 1,
 			}
-			if err := tx.Create(invItem).Error; err != nil {
+			if err := m.invRepo.CreateItem(invItem); err != nil {
 				return err
 			}
 		} else {
 			invItem.Quantity++
-			if err := tx.Save(invItem).Error; err != nil {
+			if err := m.invRepo.UpdateItem(invItem); err != nil {
 				return err
 			}
 		}
@@ -87,7 +87,7 @@ func (m *merchService) BuyItem(userID uint, itemType string) error {
 			Type:       domain.Purchase,
 			ToUserID:   nil,
 		}
-		if err := tx.Create(txItem).Error; err != nil {
+		if err := m.txRepo.CreateTransaction(txItem); err != nil {
 			return err
 		}
 

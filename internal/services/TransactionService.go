@@ -12,57 +12,59 @@ type TransactionService interface {
 }
 
 type transactionService struct {
-	transactionRepo repositories.TransactionRepository
 	userRepo        repositories.UserRepository
+	transactionRepo repositories.TransactionRepository
 	db              *gorm.DB
 }
 
-func NewTransactionServie(
+func NewTransactionService(
 	userRepo repositories.UserRepository,
-	tx repositories.TransactionRepository,
+	txRepo repositories.TransactionRepository,
 	db *gorm.DB,
 ) TransactionService {
-	return &transactionService{userRepo: userRepo, transactionRepo: tx, db: db}
+	return &transactionService{userRepo: userRepo, transactionRepo: txRepo, db: db}
 }
 
 func (t *transactionService) TransferCoins(fromUserID, toUserID uint, amount int) error {
 	if fromUserID == toUserID {
-		return fmt.Errorf("Cannot transfer coins to yourself")
+		return fmt.Errorf("cannot transfer coins to yourself")
 	}
 
 	if amount <= 0 {
-		return fmt.Errorf("Amount must be greater than 0")
+		return fmt.Errorf("amount must be greater than 0")
 	}
 
 	err := t.db.Transaction(func(tx *gorm.DB) error {
-		fromUser, err := t.userRepo.GetUserByID(fromUserID)
+		userRepoTx := repositories.NewUserRepository(tx)
+		txRepoTx := repositories.NewTransactionRepository(tx)
+
+		fromUser, err := userRepoTx.GetUserByID(fromUserID)
 		if err != nil {
 			return err
 		}
 		if fromUser == nil {
-			return fmt.Errorf("User %d not found", fromUserID)
+			return fmt.Errorf("user %d not found", fromUserID)
 		}
 
-		toUser, err := t.userRepo.GetUserByID(toUserID)
+		toUser, err := userRepoTx.GetUserByID(toUserID)
 		if err != nil {
 			return err
 		}
 		if toUser == nil {
-			return fmt.Errorf("User %d not found", toUserID)
+			return fmt.Errorf("user %d not found", toUserID)
 		}
 
 		if fromUser.Coins < amount {
-			return fmt.Errorf("User %d does not have enough coins", fromUserID)
+			return fmt.Errorf("user %d does not have enough coins", fromUserID)
 		}
 
 		fromUser.Coins -= amount
 		toUser.Coins += amount
 
-		if err := tx.Save(fromUser).Error; err != nil {
+		if err := userRepoTx.UpdateUser(fromUser); err != nil {
 			return err
 		}
-
-		if err := tx.Save(toUser).Error; err != nil {
+		if err := userRepoTx.UpdateUser(toUser); err != nil {
 			return err
 		}
 
@@ -73,7 +75,7 @@ func (t *transactionService) TransferCoins(fromUserID, toUserID uint, amount int
 			Type:       domain.Transfer,
 		}
 
-		if err := tx.Create(transaction).Error; err != nil {
+		if err := txRepoTx.CreateTransaction(transaction); err != nil {
 			return err
 		}
 
