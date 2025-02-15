@@ -2,6 +2,8 @@ package domain
 
 import "time"
 
+// User represents an employee in the system.
+// swagger:model User
 type User struct {
 	ID           uint   `gorm:"primaryKey"`
 	Username     string `gorm:"uniqueIndex;not null;size:255"`

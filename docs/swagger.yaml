@@ -1,0 +1,223 @@
+basePath: /
+definitions:
+  handlers.AuthRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.AuthResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  handlers.SendCoinRequest:
+    properties:
+      amount:
+        type: integer
+      toUser:
+        type: string
+    required:
+    - amount
+    - toUser
+    type: object
+  services.CoinHistory:
+    properties:
+      received:
+        items:
+          $ref: '#/definitions/services.ReceivedTransaction'
+        type: array
+      sent:
+        items:
+          $ref: '#/definitions/services.SentTransaction'
+        type: array
+    type: object
+  services.InfoResponse:
+    properties:
+      coinHistory:
+        $ref: '#/definitions/services.CoinHistory'
+      coins:
+        type: integer
+      inventory:
+        items:
+          $ref: '#/definitions/services.ItemInfo'
+        type: array
+    type: object
+  services.ItemInfo:
+    properties:
+      quantity:
+        type: integer
+      type:
+        type: string
+    type: object
+  services.ReceivedTransaction:
+    properties:
+      amount:
+        type: integer
+      fromUser:
+        type: string
+    type: object
+  services.SentTransaction:
+    properties:
+      amount:
+        type: integer
+      toUser:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@avito.tech
+    name: API Support
+  description: API for the Avito internal merch shop. Employees can purchase merch
+    with coins and transfer coins among themselves.
+  title: API Avito shop
+  version: 1.0.0
+paths:
+  /api/auth:
+    post:
+      consumes:
+      - application/json
+      description: If the user does not exist, the service registers the user and
+        returns a token; otherwise, it performs login.
+      parameters:
+      - description: Authentication request payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AuthResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Authenticate user and return JWT token
+      tags:
+      - auth
+  /api/buy/{item}:
+    get:
+      description: Allows the authenticated user to buy a merch item specified by
+        the item type.
+      parameters:
+      - description: Merch item type
+        in: path
+        name: item
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful purchase response
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Purchase a merchandise item using coins
+      tags:
+      - merch
+  /api/info:
+    get:
+      description: Retrieves the coin balance, purchased merch items, and coin transaction
+        history for the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.InfoResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user's coin info, inventory, and transaction history
+      tags:
+      - user
+  /api/sendCoin:
+    post:
+      consumes:
+      - application/json
+      description: Enables the authenticated user to transfer coins to another user.
+      parameters:
+      - description: Send coin request payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SendCoinRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful coin transfer response
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Send coins to another user
+      tags:
+      - transaction
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

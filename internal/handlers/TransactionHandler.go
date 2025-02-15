@@ -8,11 +8,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// SendCoinRequest represents the request payload for sending coins.
+// swagger:model SendCoinRequest
 type SendCoinRequest struct {
 	ToUser string `json:"toUser" binding:"required"`
 	Amount int    `json:"amount" binding:"required"`
 }
 
+// SendCoinHandler godoc
+// @Summary      Send coins to another user
+// @Description  Enables the authenticated user to transfer coins to another user.
+// @Tags         transaction
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      SendCoinRequest  true  "Send coin request payload"
+// @Success      200   {object}  map[string]interface{} "Successful coin transfer response"
+// @Failure      400   {object}  map[string]string "Bad request"
+// @Failure      401   {object}  map[string]string "Unauthorized"
+// @Router       /api/sendCoin [post]
 func SendCoinHandler(txService services.TransactionService, userRepo repositories.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req SendCoinRequest
