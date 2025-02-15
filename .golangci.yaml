@@ -1,0 +1,86 @@
+run:
+  timeout: 3m
+  tests: true
+  issues-exit-code: 1
+  concurrency: 4
+
+linters-settings:
+
+  
+  govet:
+    check-shadowing: true
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gocyclo:
+    min-complexity: 10
+
+  wsl:
+    force-err-cuddling: true
+
+  errcheck:
+    check-type-assertions: false
+    ignoretests: false
+
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+      - opinionated
+      - diagnostic
+
+  revive:
+    ignore-generated-header: false
+
+  ineffassign: {}
+
+  unparam: {}
+
+  misspell:
+    locale: US
+
+  nlreturn:
+    block-size: 2
+
+  gosec:
+
+  whitespace:
+    multiLineTrailingSpace: true
+    noTrailingSpace: true
+    oneLineTrailingSpace: true
+
+  forbidigo:
+    forbid:
+      - (?i)fmt\.Print
+      - panic
+
+  godot:
+    comments: true
+
+  depguard:
+
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - gosimple
+    - typecheck
+    - errcheck
+    - goconst
+    - gocyclo
+    - gofmt
+    - unparam
+    - ineffassign
+    - bodyclose
+    - misspell
+    - gosec
+    - whitespace
+    - forbidigo
+
+  disable:
+    - funlen
+    - lll
