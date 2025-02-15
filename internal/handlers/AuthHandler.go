@@ -23,17 +23,16 @@ func AuthHandler(authService services.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		token, err := authService.Login(req.Username, req.Password)
+		loginToken, err := authService.Login(req.Username, req.Password)
 		if err != nil {
-			token, regErr := authService.Register(req.Username, req.Password)
+			regToken, regErr := authService.Register(req.Username, req.Password)
 			if regErr != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{"errors": regErr.Error()})
 				return
 			}
-			c.JSON(http.StatusOK, AuthResponse{Token: token})
+			c.JSON(http.StatusOK, AuthResponse{Token: regToken})
 			return
 		}
-
-		c.JSON(http.StatusOK, AuthResponse{Token: token})
+		c.JSON(http.StatusOK, AuthResponse{Token: loginToken})
 	}
 }

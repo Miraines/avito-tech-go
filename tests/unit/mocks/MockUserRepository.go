@@ -45,3 +45,8 @@ func (m *MockUserRepository) ChangeCoins(userID int, delta int) error {
 	args := m.Called(userID, delta)
 	return args.Error(0)
 }
+
+func (m *MockUserRepository) GetUsernamesByIDs(ids []uint) (map[uint]string, error) {
+	args := m.Called(ids)
+	return args.Get(0).(map[uint]string), args.Error(1)
+}

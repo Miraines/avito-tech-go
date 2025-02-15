@@ -28,6 +28,11 @@ func NewDBConnection(cfg *config.Config) (*gorm.DB, error) {
 		if err == nil {
 			sqlDB, err := db.DB()
 			if err == nil && sqlDB.Ping() == nil {
+				// Настраиваем пул соединений
+				sqlDB.SetMaxOpenConns(95)                  // Максимальное число открытых соединений
+				sqlDB.SetMaxIdleConns(50)                  // Максимальное число простаивающих соединений
+				sqlDB.SetConnMaxLifetime(15 * time.Minute) // Время жизни соединения
+
 				return db, nil
 			}
 		}

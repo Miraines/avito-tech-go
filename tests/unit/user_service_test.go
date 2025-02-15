@@ -48,6 +48,7 @@ func TestUserService_GetInfo(t *testing.T) {
 		mockInvRepo.ExpectedCalls = nil
 		mockTxRepo.ExpectedCalls = nil
 
+		// Ожидается вызов GetUserByID для основного пользователя (ID=1)
 		mockUserRepo.On("GetUserByID", uint(1)).
 			Return(&domain.User{ID: 1, Username: "alex", Coins: 1000}, nil).Once()
 
@@ -67,14 +68,17 @@ func TestUserService_GetInfo(t *testing.T) {
 				{ID: 3, FromUserID: 2, ToUserID: func() *uint { v := uint(1); return &v }(), Amount: 50, Type: domain.Transfer},
 			}, nil).Once()
 
-		mockUserRepo.On("GetUserByID", uint(2)).
-			Return(&domain.User{ID: 2, Username: "bob"}, nil).Times(2)
+		// Ожидаем вызов GetUsernamesByIDs с параметром []uint{2}
+		mockUserRepo.On("GetUsernamesByIDs", []uint{2}).
+			Return(map[uint]string{2: "bob"}, nil).Once()
+
+		// Удаляем ожидания для GetUserByID(uint(2)), так как они больше не требуются
 
 		info, err := userSvc.GetInfo(1)
 		assert.NoError(t, err)
 		assert.NotNil(t, info)
 		assert.Equal(t, 1000, info.Coins)
-		assert.Len(t, info.Inventory, 2) // Ожидаем два предмета: t-shirt и cup
+		assert.Len(t, info.Inventory, 2) // ожидаем два предмета: t-shirt и cup
 
 		// Проверка истории транзакций:
 		// 1) Purchase -> sent: toUser="shop", amount=80

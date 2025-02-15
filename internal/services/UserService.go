@@ -4,6 +4,7 @@ import (
 	"avito-tech-go/internal/domain"
 	"avito-tech-go/internal/repositories"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 )
 
 type InfoResponse struct {
@@ -55,7 +56,8 @@ func NewUserService(
 }
 
 func (s *userService) GetInfo(userID uint) (*InfoResponse, error) {
-	user, err := s.userRepo.GetUserByID(userID)
+	// Сначала получаем данные пользователя
+	user, err := s.getUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,57 +65,136 @@ func (s *userService) GetInfo(userID uint) (*InfoResponse, error) {
 		return nil, fmt.Errorf("user not found")
 	}
 
+	var (
+		inventory    []ItemInfo
+		transactions []domain.Transaction
+	)
+
+	// Создаем группу для параллельного выполнения
+	var g errgroup.Group
+
+	// Запускаем запрос на получение инвентаря
+	g.Go(func() error {
+		inv, err := s.getInventoryInfo(userID)
+		if err != nil {
+			return err
+		}
+		inventory = inv
+		return nil
+	})
+
+	// Запускаем запрос на получение транзакций
+	g.Go(func() error {
+		txs, err := s.getUserTransactions(userID)
+		if err != nil {
+			return err
+		}
+		transactions = txs
+		return nil
+	})
+
+	// Ждем завершения обеих горутин
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	// Получаем имена пользователей, задействованных в транзакциях
+	usernamesMap, err := s.getUsernamesForTransactions(userID, transactions)
+	if err != nil {
+		return nil, err
+	}
+
+	// Формируем историю транзакций
+	coinHistory := s.buildCoinHistory(userID, transactions, usernamesMap)
+
+	return &InfoResponse{
+		Coins:       user.Coins,
+		Inventory:   inventory,
+		CoinHistory: coinHistory,
+	}, nil
+}
+
+// getUser получает пользователя по ID
+func (s *userService) getUser(userID uint) (*domain.User, error) {
+	return s.userRepo.GetUserByID(userID)
+}
+
+// getInventoryInfo получает информацию об инвентаре пользователя
+func (s *userService) getInventoryInfo(userID uint) ([]ItemInfo, error) {
 	invItems, err := s.invRepo.GetAllByUser(userID)
 	if err != nil {
 		return nil, err
 	}
-
-	transactions, err := s.transactionRepo.GetUserTransactions(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	info := &InfoResponse{
-		Coins:       user.Coins,
-		Inventory:   []ItemInfo{},
-		CoinHistory: CoinHistory{},
-	}
-
+	var items []ItemInfo
 	for _, item := range invItems {
-		info.Inventory = append(info.Inventory, ItemInfo{
+		items = append(items, ItemInfo{
 			Type:     item.ItemType,
 			Quantity: item.Quantity,
 		})
 	}
+	return items, nil
+}
 
+// getUserTransactions получает транзакции пользователя
+func (s *userService) getUserTransactions(userID uint) ([]domain.Transaction, error) {
+	return s.transactionRepo.GetUserTransactions(userID)
+}
+
+// getUsernamesForTransactions собирает уникальные ID и пакетно получает имена пользователей
+func (s *userService) getUsernamesForTransactions(userID uint, transactions []domain.Transaction) (map[uint]string, error) {
+	uniqueIDs := make(map[uint]struct{})
+	for _, tx := range transactions {
+		if tx.Type == domain.Transfer {
+			if tx.FromUserID != userID {
+				uniqueIDs[tx.FromUserID] = struct{}{}
+			}
+			if tx.ToUserID != nil && *tx.ToUserID != userID {
+				uniqueIDs[*tx.ToUserID] = struct{}{}
+			}
+		}
+	}
+	var ids []uint
+	for id := range uniqueIDs {
+		ids = append(ids, id)
+	}
+	return s.userRepo.GetUsernamesByIDs(ids)
+}
+
+// buildCoinHistory формирует историю транзакций для ответа
+func (s *userService) buildCoinHistory(userID uint, transactions []domain.Transaction, usernamesMap map[uint]string) CoinHistory {
+	var history CoinHistory
 	for _, tx := range transactions {
 		switch tx.Type {
 		case domain.Transfer:
 			if tx.FromUserID == userID {
-				toName := s.getUsernameByID(*tx.ToUserID)
-				info.CoinHistory.Sent = append(info.CoinHistory.Sent, SentTransaction{
+				toName := "unknown"
+				if tx.ToUserID != nil {
+					if name, ok := usernamesMap[*tx.ToUserID]; ok {
+						toName = name
+					}
+				}
+				history.Sent = append(history.Sent, SentTransaction{
 					ToUser: toName,
 					Amount: tx.Amount,
 				})
 			} else {
-				fromName := s.getUsernameByID(tx.FromUserID)
-				info.CoinHistory.Received = append(info.CoinHistory.Received, ReceivedTransaction{
+				fromName := "unknown"
+				if name, ok := usernamesMap[tx.FromUserID]; ok {
+					fromName = name
+				}
+				history.Received = append(history.Received, ReceivedTransaction{
 					FromUser: fromName,
 					Amount:   tx.Amount,
 				})
 			}
-
 		case domain.Purchase:
-			info.CoinHistory.Sent = append(info.CoinHistory.Sent, SentTransaction{
+			history.Sent = append(history.Sent, SentTransaction{
 				ToUser: "shop",
 				Amount: tx.Amount,
 			})
-
-		default:
 		}
 	}
-
-	return info, nil
+	return history
 }
 
 func (s *userService) getUsernameByID(userID uint) string {

@@ -44,6 +44,5 @@ func getEnv(key, defaultValue string) string {
 	if val == "" {
 		return defaultValue
 	}
-
 	return val
 }

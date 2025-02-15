@@ -14,6 +14,7 @@ type UserRepository interface {
 	GetUserByName(username string) (*domain.User, error)
 	ExistsByUsername(username string) (bool, error)
 	ChangeCoins(userID int, delta int) error
+	GetUsernamesByIDs(ids []uint) (map[uint]string, error)
 }
 
 type userRepository struct {
@@ -79,4 +80,16 @@ func (u *userRepository) ChangeCoins(userID int, delta int) error {
 		return errors.New("no rows affected (users not found?)")
 	}
 	return nil
+}
+
+func (u *userRepository) GetUsernamesByIDs(ids []uint) (map[uint]string, error) {
+	var users []domain.User
+	if err := u.db.Where("id IN ?", ids).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	result := make(map[uint]string, len(users))
+	for _, user := range users {
+		result[user.ID] = user.Username
+	}
+	return result, nil
 }
